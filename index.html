@@ -302,6 +302,58 @@ padding: 20px;
 margin-bottom: 20px;
 }
 
+.form-section-title {
+font-size: 14px;
+font-weight: 600;
+color: var(--text-primary);
+margin-bottom: 10px;
+}
+
+.checkbox-list {
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+
+.checkbox-item {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 6px 0;
+}
+
+.checkbox-item input[type="checkbox"] {
+width: 16px;
+height: 16px;
+cursor: pointer;
+flex-shrink: 0;
+}
+
+.checkbox-item label {
+cursor: pointer;
+font-size: 13px;
+user-select: none;
+flex: 1;
+}
+
+.bucket-details {
+margin-left: 24px;
+margin-top: 8px;
+margin-bottom: 12px;
+padding: 10px;
+background: var(--background-light);
+border-radius: 4px;
+border-left: 3px solid var(--primary-color);
+}
+
+.form-control-compact {
+margin-bottom: 8px;
+}
+
+.form-control-compact:last-child {
+margin-bottom: 0;
+}
+
 .radio-group {
 display: flex;
 flex-direction: column;
@@ -655,6 +707,7 @@ buckets: [
 "Overall Observations"
 ],
 hvaOptions: [
+"N/A",
 "3WM (3-Way Match)",
 "Account Authority",
 "Add User",
@@ -723,12 +776,8 @@ loadingSpinner: document.getElementById('loading-spinner')
 
 function createFeedbackForm() {
 let html = `
-<div class="collapsible-section">
-<div class="collapsible-header" onclick="toggleCollapsible(this)">
-<span>Bot Response</span>
-<span class="toggle-icon">▼</span>
-</div>
-<div class="collapsible-content open">
+<div class="form-section">
+<div class="form-section-title">Bot Response</div>
 <div class="radio-group">
 <div class="radio-option">
 <input type="radio" id="accurate" name="bot-response" value="Accurate Response" onchange="markUnsaved()">
@@ -740,69 +789,71 @@ let html = `
 </div>
 </div>
 </div>
-</div>
 
-<div class="collapsible-section">
-<div class="collapsible-header" onclick="toggleCollapsible(this)">
-<span>HVA</span>
-<span class="toggle-icon">▼</span>
-</div>
-<div class="collapsible-content open">
-<div class="form-group">
-<select class="form-control" id="hva-select" onchange="markUnsaved()">
+<div class="form-section">
+<div class="form-section-title">Select HVA</div>
+<select class="form-control form-control-compact" id="hva-select" onchange="markUnsaved()">
 <option value="">Select an HVA</option>
 ${tool.hvaOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
 </select>
 </div>
-</div>
-</div>
+
+<div class="form-section">
+<div class="form-section-title">Annotation Categories</div>
+<div class="checkbox-list">
 `;
 
 tool.buckets.slice(2).forEach((bucket, idx) => {
 html += `
-<div class="collapsible-section" data-bucket="${bucket}">
-<div class="collapsible-header" onclick="toggleCollapsible(this)">
-<span>${bucket}</span>
-<span class="toggle-icon">▼</span>
+<div class="checkbox-item">
+<input type="checkbox" id="bucket-${idx}" name="bucket-checkbox" value="${bucket}" onchange="toggleBucketDetails('${bucket}')">
+<label for="bucket-${idx}">${bucket}</label>
 </div>
-<div class="collapsible-content">
+<div class="bucket-details" id="details-${bucket}" style="display: none;">
 `;
 
 if (tool.staticComments[bucket] && tool.staticComments[bucket].length > 0) {
 html += `
-<div class="form-group">
-<select class="form-control" name="${bucket}-static" onchange="markUnsaved()">
+<select class="form-control form-control-compact" name="${bucket}-static" onchange="markUnsaved()">
 <option value="">Select a predefined comment...</option>
 ${tool.staticComments[bucket].map(comment => `<option value="${comment}">${comment}</option>`).join('')}
 </select>
-</div>
-<div class="form-group">
-<textarea class="form-control" name="${bucket}-sub" placeholder="Optional: Add ' - ' followed by your additional notes" rows="2" oninput="markUnsaved()"></textarea>
-<div class="helper-text">Add custom notes after selecting a predefined comment</div>
-</div>
+<textarea class="form-control form-control-compact" name="${bucket}-sub" placeholder="Optional: Add ' - ' followed by your additional notes" rows="2" oninput="markUnsaved()"></textarea>
 `;
 } else {
 html += `
-<div class="form-group">
-<textarea class="form-control" name="${bucket}" placeholder="Add comments for ${bucket}" rows="3" oninput="markUnsaved()"></textarea>
-</div>
+<textarea class="form-control form-control-compact" name="${bucket}" placeholder="Add comments for ${bucket}" rows="2" oninput="markUnsaved()"></textarea>
 `;
 }
 
 html += `
-</div>
 </div>
 `;
 });
 
+html += `
+</div>
+</div>
+`;
+
 elements.feedbackForm.innerHTML = html;
 }
 
-window.toggleCollapsible = function(header) {
-const content = header.nextElementSibling;
-const icon = header.querySelector('.toggle-icon');
-content.classList.toggle('open');
-icon.classList.toggle('open');
+window.toggleBucketDetails = function(bucket) {
+const checkbox = document.querySelector(`input[value="${bucket}"]`);
+const details = document.getElementById(`details-${bucket}`);
+if (checkbox.checked) {
+details.style.display = 'block';
+markUnsaved();
+} else {
+details.style.display = 'none';
+// Clear the fields
+const selects = details.querySelectorAll('select');
+const textareas = details.querySelectorAll('textarea');
+selects.forEach(s => s.value = '');
+textareas.forEach(t => t.value = '');
+markUnsaved();
+}
 };
 
 window.markUnsaved = function() {
@@ -972,6 +1023,8 @@ tempAnnotations["HVA"] = hvaSelect.value;
 }
 
 tool.buckets.slice(2).forEach(bucket => {
+const checkbox = document.querySelector(`input[value="${bucket}"]`);
+if (checkbox && checkbox.checked) {
 if (tool.staticComments[bucket] && tool.staticComments[bucket].length > 0) {
 const staticDropdown = document.querySelector(`select[name="${bucket}-static"]`);
 const subTextarea = document.querySelector(`textarea[name="${bucket}-sub"]`);
@@ -989,6 +1042,7 @@ tempAnnotations[bucket] = finalValue;
 const textarea = document.querySelector(`textarea[name="${bucket}"]`);
 if (textarea && textarea.value.trim()) {
 tempAnnotations[bucket] = textarea.value.trim();
+}
 }
 }
 });
@@ -1011,42 +1065,27 @@ const savedAnnotations = tool.annotations[convId] || {};
 
 document.querySelectorAll('input[name="bot-response"]').forEach(radio => radio.checked = false);
 document.getElementById('hva-select').value = '';
+document.querySelectorAll('input[name="bucket-checkbox"]').forEach(cb => cb.checked = false);
+document.querySelectorAll('.bucket-details').forEach(details => details.style.display = 'none');
 document.querySelectorAll('select[name*="-static"]').forEach(sel => sel.value = '');
 document.querySelectorAll('textarea').forEach(ta => ta.value = '');
 
-// Remove all has-content classes first
-document.querySelectorAll('.collapsible-section').forEach(section => {
-section.classList.remove('has-content');
-section.querySelector('.collapsible-header').classList.remove('has-content');
-});
-
 if (savedAnnotations["Bot Response"]) {
 const radio = document.querySelector(`input[name="bot-response"][value="${savedAnnotations["Bot Response"]}"]`);
-if (radio) {
-radio.checked = true;
-const section = radio.closest('.collapsible-section');
-if (section) {
-section.classList.add('has-content');
-section.querySelector('.collapsible-header').classList.add('has-content');
-}
-}
+if (radio) radio.checked = true;
 }
 
 if (savedAnnotations["HVA"]) {
 document.getElementById('hva-select').value = savedAnnotations["HVA"];
-const section = document.getElementById('hva-select').closest('.collapsible-section');
-if (section) {
-section.classList.add('has-content');
-section.querySelector('.collapsible-header').classList.add('has-content');
-}
 }
 
 tool.buckets.slice(2).forEach(bucket => {
 if (savedAnnotations[bucket]) {
-const section = document.querySelector(`[data-bucket="${bucket}"]`);
-if (section) {
-section.classList.add('has-content');
-section.querySelector('.collapsible-header').classList.add('has-content');
+const checkbox = document.querySelector(`input[value="${bucket}"]`);
+if (checkbox) {
+checkbox.checked = true;
+const details = document.getElementById(`details-${bucket}`);
+if (details) details.style.display = 'block';
 }
 
 if (tool.staticComments[bucket] && tool.staticComments[bucket].length > 0) {
