@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversation Annotator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+--primary-color: #007bff;
+--success-color: #28a745;
+--warning-color: #ffc107;
+--error-color: #dc3545;
+--text-primary: #333;
+--text-secondary: #666;
+--border-color: #ddd;
+--background-light: #f8f9fa;
+--sidebar-width: 400px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+background: #fff;
+color: var(--text-primary);
+line-height: 1.6;
+height: 100vh;
+overflow: hidden;
+}
+
+.upload-screen {
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+padding: 20px;
+background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.upload-container {
+background: white;
+padding: 40px;
+border-radius: 12px;
+box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+max-width: 600px;
+width: 100%;
+text-align: center;
+}
+
+.upload-box {
+position: relative;
+border: 2px dashed #ccc;
+border-radius: 8px;
+padding: 40px;
+margin-top: 20px;
+text-align: center;
+transition: all 0.3s ease;
+cursor: pointer;
+}
+
+.upload-box:hover {
+border-color: var(--primary-color);
+background: #f8f9fa;
+}
+
+.upload-icon {
+width: 64px;
+height: 64px;
+margin: 0 auto 20px;
+fill: #007bff;
+}
+
+.main-interface {
+display: flex;
+flex-direction: column;
+height: 100vh;
+overflow: hidden;
+}
+
+.top-bar {
+background: #fff;
+border-bottom: 1px solid var(--border-color);
+padding: 12px 20px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.top-bar h1 {
+font-size: 18px;
+font-weight: 600;
+color: var(--text-primary);
+}
+
+.top-bar-actions {
+display: flex;
+gap: 15px;
+align-items: center;
+}
+
+.progress-info {
+display: flex;
+align-items: center;
+gap: 15px;
+}
+
+.progress-text {
+font-size: 14px;
+color: var(--text-secondary);
+}
+
+.annotated-count {
+font-size: 13px;
+padding: 4px 10px;
+background: #e7f3ff;
+color: #0066cc;
+border-radius: 4px;
+font-weight: 500;
+}
+
+.content-wrapper {
+display: flex;
+flex: 1;
+overflow: hidden;
+}
+
+.main-content {
+flex: 1;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+background: var(--background-light);
+}
+
+.conversation-header {
+background: #fff;
+padding: 15px 20px;
+border-bottom: 1px solid var(--border-color);
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.conversation-metadata {
+display: flex;
+gap: 20px;
+align-items: center;
+font-size: 14px;
+}
+
+.status-indicator {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 6px 12px;
+border-radius: 4px;
+font-size: 13px;
+font-weight: 500;
+}
+
+.status-annotated {
+background: #d4edda;
+color: #155724;
+}
+
+.status-not-annotated {
+background: #fff3cd;
+color: #856404;
+}
+
+.conversation-display {
+flex: 1;
+overflow-y: auto;
+padding: 20px;
+background: #f5f5f5;
+}
+
+.message {
+padding: 15px;
+margin: 10px 0;
+border-radius: 8px;
+max-width: 80%;
+box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.message-header {
+font-size: 12px;
+color: var(--text-secondary);
+margin-bottom: 8px;
+font-weight: 500;
+}
+
+.customer {
+background: #e8f4fd;
+margin-left: auto;
+border-left: 3px solid #007bff;
+}
+
+.bot {
+background: #fff;
+margin-right: auto;
+border-left: 3px solid #ffc107;
+}
+
+.navigation-bar {
+background: #fff;
+padding: 15px 20px;
+border-top: 1px solid var(--border-color);
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 15px;
+}
+
+.nav-buttons {
+display: flex;
+gap: 10px;
+}
+
+.jump-to-section {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.jump-to-section label {
+font-size: 13px;
+color: var(--text-secondary);
+white-space: nowrap;
+}
+
+.jump-to-section input {
+width: 80px;
+padding: 6px 10px;
+border: 1px solid var(--border-color);
+border-radius: 4px;
+font-size: 14px;
+text-align: center;
+}
+
+.quick-actions {
+display: flex;
+gap: 8px;
+}
+
+.progress-bar-wrapper {
+flex: 1;
+max-width: 200px;
+}
+
+.progress-bar {
+width: 100%;
+height: 6px;
+background: #e9ecef;
+border-radius: 3px;
+overflow: hidden;
+}
+
+.progress-fill {
+height: 100%;
+background: linear-gradient(90deg, var(--primary-color), #0056b3);
+transition: width 0.3s ease;
+}
+
+.keyboard-shortcuts-hint {
+font-size: 11px;
+color: var(--text-secondary);
+text-align: center;
+margin-top: 8px;
+padding-top: 8px;
+border-top: 1px solid var(--border-color);
+}
+
+.sidebar {
+width: var(--sidebar-width);
+background: #fff;
+border-left: 1px solid var(--border-color);
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+
+.sidebar-header {
+padding: 15px 20px;
+border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h2 {
+font-size: 16px;
+font-weight: 600;
+}
+
+.sidebar-content {
+flex: 1;
+overflow-y: auto;
+padding: 20px;
+}
+
+.form-section {
+margin-bottom: 20px;
+}
+
+.radio-group {
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+
+.radio-option {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 8px 0;
+}
+
+.radio-option input[type="radio"] {
+width: 16px;
+height: 16px;
+cursor: pointer;
+}
+
+.radio-option label {
+cursor: pointer;
+font-size: 14px;
+user-select: none;
+}
+
+.form-group {
+margin-bottom: 15px;
+}
+
+.form-group label {
+display: block;
+font-size: 13px;
+font-weight: 500;
+margin-bottom: 6px;
+color: var(--text-secondary);
+}
+
+.form-control {
+width: 100%;
+padding: 8px 12px;
+border: 1px solid var(--border-color);
+border-radius: 4px;
+font-family: inherit;
+font-size: 14px;
+transition: all 0.2s ease;
+}
+
+.form-control:focus {
+outline: none;
+border-color: var(--primary-color);
+box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+textarea.form-control {
+resize: vertical;
+min-height: 80px;
+}
+
+.sidebar-footer {
+padding: 15px 20px;
+border-top: 1px solid var(--border-color);
+}
+
+.unsaved-indicator {
+display: none;
+font-size: 12px;
+color: var(--warning-color);
+margin-bottom: 10px;
+font-style: italic;
+}
+
+.unsaved-indicator.show {
+display: block;
+}
+
+.btn {
+padding: 8px 16px;
+border: none;
+border-radius: 4px;
+font-size: 14px;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.2s ease;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 6px;
+}
+
+.btn-primary {
+background: var(--primary-color);
+color: white;
+}
+
+.btn-primary:hover {
+background: #0056b3;
+}
+
+.btn-success {
+background: var(--success-color);
+color: white;
+width: 100%;
+}
+
+.btn-success:hover {
+background: #218838;
+}
+
+.btn-outline {
+background: white;
+color: var(--text-primary);
+border: 1px solid var(--border-color);
+}
+
+.btn-outline:hover {
+background: var(--background-light);
+}
+
+.btn-sm {
+padding: 6px 12px;
+font-size: 13px;
+}
+
+.btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+
+.badge {
+display: inline-block;
+padding: 4px 10px;
+border-radius: 4px;
+font-size: 12px;
+font-weight: 600;
+}
+
+.badge-success {
+background: #d4edda;
+color: #155724;
+}
+
+.badge-danger {
+background: #f8d7da;
+color: #721c24;
+}
+
+.status-message {
+position: fixed;
+bottom: 20px;
+right: 20px;
+padding: 12px 24px;
+border-radius: 4px;
+background: white;
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+display: none;
+z-index: 1000;
+font-size: 14px;
+}
+
+.status-success { border-left: 4px solid var(--success-color); }
+.status-error { border-left: 4px solid var(--error-color); }
+.status-warning { border-left: 4px solid var(--warning-color); }
+.status-info { border-left: 4px solid var(--primary-color); }
+
+.loading-spinner {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(255,255,255,0.9);
+display: none;
+justify-content: center;
+align-items: center;
+z-index: 1000;
+flex-direction: column;
+gap: 20px;
+}
+
+.spinner {
+width: 40px;
+height: 40px;
+border: 4px solid #f3f3f3;
+border-top: 4px solid var(--primary-color);
+border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+.collapsible-section {
+margin-bottom: 15px;
+border: 1px solid var(--border-color);
+border-radius: 4px;
+overflow: hidden;
+}
+
+.collapsible-header {
+padding: 12px;
+background: var(--background-light);
+cursor: pointer;
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-weight: 500;
+font-size: 14px;
+user-select: none;
+transition: background 0.2s ease;
+}
+
+.collapsible-header:hover {
+background: #e9ecef;
+}
+
+.collapsible-section.has-content {
+border-left: 3px solid var(--success-color);
+}
+
+.collapsible-header.has-content {
+background: #f0f9ff;
+font-weight: 600;
+}
+
+.collapsible-content {
+padding: 15px;
+display: none;
+background: white;
+}
+
+.collapsible-content.open {
+display: block;
+}
+
+.toggle-icon {
+transition: transform 0.2s;
+font-size: 12px;
+color: var(--text-secondary);
+}
+
+.toggle-icon.open {
+transform: rotate(180deg);
+}
+
+.helper-text {
+font-size: 12px;
+color: var(--text-secondary);
+margin-top: 6px;
+font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div id="upload-screen" class="upload-screen">
+<div class="upload-container">
+<h1>Conversation Annotator</h1>
+<div class="upload-box" id="upload-box">
+<input type="file" id="excel-upload" accept=".xlsx" style="display: none;">
+<div class="upload-content">
+<svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+</svg>
+<p>Drag & drop your Excel file here or click to browse</p>
+<small>Only .xlsx files are supported</small>
+</div>
+</div>
+</div>
+</div>
+
+<div id="main-interface" class="main-interface" style="display: none;">
+<div class="top-bar">
+<h1>Conversation Annotator</h1>
+<div class="top-bar-actions">
+<div class="progress-info">
+<span class="progress-text" id="progress-text">0/0 Conversations</span>
+<span class="annotated-count" id="annotated-count">0 Annotated</span>
+</div>
+<button id="download-btn" class="btn btn-primary">📥 Download</button>
+</div>
+</div>
+
+<div class="content-wrapper">
+<div class="main-content">
+<div class="conversation-header">
+<div class="conversation-metadata" id="conversation-info"></div>
+<div id="annotation-status"></div>
+</div>
+<div class="conversation-display" id="conversation-display"></div>
+<div class="navigation-bar">
+<div class="nav-buttons">
+<button id="prev-btn" class="btn btn-outline">◀ Previous</button>
+<button id="next-btn" class="btn btn-outline">Next ▶</button>
+</div>
+<div class="progress-bar-wrapper">
+<div class="progress-bar">
+<div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+</div>
+</div>
+<div class="jump-to-section">
+<label for="jump-input">Jump to:</label>
+<input type="number" id="jump-input" min="1" placeholder="#" />
+<button id="jump-btn" class="btn btn-outline btn-sm">Go</button>
+</div>
+</div>
+</div>
+
+<div class="sidebar">
+<div class="sidebar-header">
+<h2>Feedback</h2>
+</div>
+<div class="sidebar-content" id="feedback-form"></div>
+<div class="sidebar-footer">
+<div class="unsaved-indicator" id="unsaved-indicator">⚠️ You have unsaved changes</div>
+<button id="save-btn" class="btn btn-success">Submit</button>
+<div class="keyboard-shortcuts-hint">
+💡 Tip: Use ← → arrows to navigate | Ctrl/Cmd+S to save
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="status-message" class="status-message"></div>
+<div id="loading-spinner" class="loading-spinner">
+<div class="spinner"></div>
+<p>Processing...</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+const tool = {
+currentIndex: 0,
+conversations: [],
+annotations: {},
+hasUnsavedChanges: false,
+buckets: [
+"Bot Response",
+"HVA",
+"AB feature/HVA Related Query",
+"Personalized/Account-Specific Queries",
+"Promo & Freebie Related Queries",
+"Help-page/Direct Customer Service",
+"BP for Non-Profit Organisation Related Query",
+"Personal Prime Related Query",
+"Customer Behavior",
+"Other Queries",
+"Overall Observations"
+],
+hvaOptions: [
+"3WM (3-Way Match)",
+"Account Authority",
+"Add User",
+"Analytics",
+"ATEP (Amazon Tax Exemption Program)",
+"Business Lists",
+"Business Order Information",
+"Custom Quotes",
+"Guided Buying",
+"PBI",
+"Quantity Discount",
+"Shared Settings",
+"SSO",
+"Subscibe & Save (formerly Recurring Delivery)"
+],
+staticComments: {
+"AB feature/HVA Related Query": ["HVA Related Query"],
+"Personalized/Account-Specific Queries": [
+"Account Status",
+"Account Specific",
+"Order Related Issue",
+"Pre-order Query",
+"Personalised query",
+"Order Tracking Issue"
+],
+"Personal Prime Related Query": ["Amazon Prime Details"],
+"BP for Non-Profit Organisation Related Query": ["Non profit organisation query"],
+"Help-page/Direct Customer Service": [
+"Customer's Direct Ask",
+"Bot recommendations"
+],
+"Customer Behavior": ["Negative feedback despite correct bot response"],
+"Other Queries": [
+"Customer annoyed by bot's pop-up",
+"Customer query not understandable",
+"Unrelated to Amazon",
+"Outside Bot's knowledge base but within Amazon Business",
+"Other query"
+],
+"Overall Observations": []
+}
+};
+
+const elements = {
+uploadScreen: document.getElementById('upload-screen'),
+mainInterface: document.getElementById('main-interface'),
+uploadBox: document.getElementById('upload-box'),
+fileInput: document.getElementById('excel-upload'),
+conversationDisplay: document.getElementById('conversation-display'),
+conversationInfo: document.getElementById('conversation-info'),
+annotationStatus: document.getElementById('annotation-status'),
+feedbackForm: document.getElementById('feedback-form'),
+prevBtn: document.getElementById('prev-btn'),
+nextBtn: document.getElementById('next-btn'),
+saveBtn: document.getElementById('save-btn'),
+downloadBtn: document.getElementById('download-btn'),
+jumpInput: document.getElementById('jump-input'),
+jumpBtn: document.getElementById('jump-btn'),
+progressText: document.getElementById('progress-text'),
+progressFill: document.getElementById('progress-fill'),
+annotatedCount: document.getElementById('annotated-count'),
+unsavedIndicator: document.getElementById('unsaved-indicator'),
+statusMessage: document.getElementById('status-message'),
+loadingSpinner: document.getElementById('loading-spinner')
+};
+
+function createFeedbackForm() {
+let html = `
+<div class="collapsible-section">
+<div class="collapsible-header" onclick="toggleCollapsible(this)">
+<span>Bot Response</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="collapsible-content open">
+<div class="radio-group">
+<div class="radio-option">
+<input type="radio" id="accurate" name="bot-response" value="Accurate Response" onchange="markUnsaved()">
+<label for="accurate">Accurate response</label>
+</div>
+<div class="radio-option">
+<input type="radio" id="inaccurate" name="bot-response" value="Inaccurate Response" onchange="markUnsaved()">
+<label for="inaccurate">Inaccurate response</label>
+</div>
+</div>
+</div>
+</div>
+
+<div class="collapsible-section">
+<div class="collapsible-header" onclick="toggleCollapsible(this)">
+<span>HVA</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="collapsible-content open">
+<div class="form-group">
+<select class="form-control" id="hva-select" onchange="markUnsaved()">
+<option value="">Select an HVA</option>
+${tool.hvaOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+</select>
+</div>
+</div>
+</div>
+`;
+
+tool.buckets.slice(2).forEach((bucket, idx) => {
+html += `
+<div class="collapsible-section" data-bucket="${bucket}">
+<div class="collapsible-header" onclick="toggleCollapsible(this)">
+<span>${bucket}</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="collapsible-content">
+`;
+
+if (tool.staticComments[bucket] && tool.staticComments[bucket].length > 0) {
+html += `
+<div class="form-group">
+<select class="form-control" name="${bucket}-static" onchange="markUnsaved()">
+<option value="">Select a predefined comment...</option>
+${tool.staticComments[bucket].map(comment => `<option value="${comment}">${comment}</option>`).join('')}
+</select>
+</div>
+<div class="form-group">
+<textarea class="form-control" name="${bucket}-sub" placeholder="Optional: Add ' - ' followed by your additional notes" rows="2" oninput="markUnsaved()"></textarea>
+<div class="helper-text">Add custom notes after selecting a predefined comment</div>
+</div>
+`;
+} else {
+html += `
+<div class="form-group">
+<textarea class="form-control" name="${bucket}" placeholder="Add comments for ${bucket}" rows="3" oninput="markUnsaved()"></textarea>
+</div>
+`;
+}
+
+html += `
+</div>
+</div>
+`;
+});
+
+elements.feedbackForm.innerHTML = html;
+}
+
+window.toggleCollapsible = function(header) {
+const content = header.nextElementSibling;
+const icon = header.querySelector('.toggle-icon');
+content.classList.toggle('open');
+icon.classList.toggle('open');
+};
+
+window.markUnsaved = function() {
+tool.hasUnsavedChanges = true;
+elements.unsavedIndicator.classList.add('show');
+};
+
+function clearUnsaved() {
+tool.hasUnsavedChanges = false;
+elements.unsavedIndicator.classList.remove('show');
+}
+
+elements.uploadBox.addEventListener('click', () => elements.fileInput.click());
+
+elements.fileInput.addEventListener('change', async (event) => {
+const file = event.target.files[0];
+if (!file) {
+showStatus('⚠️ No file selected', 'warning');
+return;
+}
+if (!file.name.endsWith('.xlsx')) {
+showStatus('❌ Please select an Excel (.xlsx) file', 'error');
+return;
+}
+try {
+showLoading(true);
+const data = await readExcelFile(file);
+if (!data || data.length === 0) {
+throw new Error('No data found in file');
+}
+processExcelData(data);
+elements.uploadScreen.style.display = 'none';
+elements.mainInterface.style.display = 'flex';
+showStatus('✅ File loaded successfully!', 'success');
+} catch (error) {
+showStatus('❌ Error: ' + (error.message || 'Failed to load file'), 'error');
+} finally {
+showLoading(false);
+}
+});
+
+elements.uploadBox.addEventListener('dragover', (e) => {
+e.preventDefault();
+elements.uploadBox.style.background = '#e3f2fd';
+});
+
+elements.uploadBox.addEventListener('dragleave', () => {
+elements.uploadBox.style.background = '';
+});
+
+elements.uploadBox.addEventListener('drop', (e) => {
+e.preventDefault();
+elements.uploadBox.style.background = '';
+const file = e.dataTransfer.files[0];
+if (file && file.name.endsWith('.xlsx')) {
+elements.fileInput.files = e.dataTransfer.files;
+elements.fileInput.dispatchEvent(new Event('change'));
+}
+});
+
+async function readExcelFile(file) {
+return new Promise((resolve, reject) => {
+const reader = new FileReader();
+reader.onload = (e) => {
+try {
+const data = new Uint8Array(e.target.result);
+const workbook = XLSX.read(data, {type: 'array'});
+const sheetName = workbook.SheetNames[0];
+const sheet = workbook.Sheets[sheetName];
+const jsonData = XLSX.utils.sheet_to_json(sheet);
+resolve(jsonData);
+} catch (error) {
+reject(new Error('Failed to parse Excel file'));
+}
+};
+reader.onerror = () => reject(new Error('Failed to read file'));
+reader.readAsArrayBuffer(file);
+});
+}
+
+function processExcelData(rawData) {
+const groupedData = {};
+rawData.forEach(row => {
+if (!groupedData[row.Id]) {
+groupedData[row.Id] = [];
+}
+groupedData[row.Id].push(row);
+});
+tool.conversations = Object.values(groupedData);
+tool.currentIndex = 0;
+tool.annotations = {};
+elements.jumpInput.max = tool.conversations.length;
+displayConversation();
+updateAnnotatedCount();
+}
+
+function displayConversation() {
+const conv = tool.conversations[tool.currentIndex];
+const lastMessage = conv[conv.length - 1];
+const convId = conv[0].Id;
+const isAnnotated = tool.annotations[convId] && Object.keys(tool.annotations[convId]).length > 0;
+
+elements.conversationInfo.innerHTML = `
+<div><strong>ID:</strong> ${conv[0].Id}</div>
+<div><strong>Feedback:</strong> 
+<span class="badge ${lastMessage['Customer Feedback']?.toLowerCase() === 'negative' ? 'badge-danger' : 'badge-success'}">
+${lastMessage['Customer Feedback'] || 'N/A'}
+</span>
+</div>
+`;
+
+elements.annotationStatus.innerHTML = `
+<div class="status-indicator ${isAnnotated ? 'status-annotated' : 'status-not-annotated'}">
+${isAnnotated ? '✓ Annotated' : '⚠ Not Annotated'}
+</div>
+`;
+
+let html = '';
+conv.forEach(message => {
+if (message.llmGeneratedUserMessage) {
+html += `
+<div class="message customer">
+<div class="message-header">👤 Customer</div>
+${message.llmGeneratedUserMessage}
+</div>
+`;
+}
+if (message.botMessage) {
+html += `
+<div class="message bot">
+<div class="message-header">🤖 Bot</div>
+${message.botMessage}
+</div>
+`;
+}
+});
+
+elements.conversationDisplay.innerHTML = html;
+elements.conversationDisplay.scrollTop = 0;
+elements.progressText.textContent = `${tool.currentIndex + 1}/${tool.conversations.length} Conversations`;
+const progressPercent = ((tool.currentIndex + 1) / tool.conversations.length) * 100;
+elements.progressFill.style.width = `${progressPercent}%`;
+elements.jumpInput.value = '';
+loadAnnotations();
+clearUnsaved();
+}
+
+function updateAnnotatedCount() {
+const count = Object.keys(tool.annotations).filter(id => 
+Object.keys(tool.annotations[id]).length > 0
+).length;
+elements.annotatedCount.textContent = `${count} Annotated`;
+}
+
+function saveCurrentAnnotations() {
+const convId = tool.conversations[tool.currentIndex][0].Id;
+const tempAnnotations = {};
+
+const botResponse = document.querySelector('input[name="bot-response"]:checked');
+if (botResponse) {
+tempAnnotations["Bot Response"] = botResponse.value;
+}
+
+const hvaSelect = document.getElementById('hva-select');
+if (hvaSelect.value) {
+tempAnnotations["HVA"] = hvaSelect.value;
+}
+
+tool.buckets.slice(2).forEach(bucket => {
+if (tool.staticComments[bucket] && tool.staticComments[bucket].length > 0) {
+const staticDropdown = document.querySelector(`select[name="${bucket}-static"]`);
+const subTextarea = document.querySelector(`textarea[name="${bucket}-sub"]`);
+const staticValue = staticDropdown ? staticDropdown.value : '';
+const subValue = subTextarea ? subTextarea.value.trim() : '';
+
+if (staticValue) {
+let finalValue = staticValue;
+if (subValue) {
+finalValue += ' - ' + subValue;
+}
+tempAnnotations[bucket] = finalValue;
+}
+} else {
+const textarea = document.querySelector(`textarea[name="${bucket}"]`);
+if (textarea && textarea.value.trim()) {
+tempAnnotations[bucket] = textarea.value.trim();
+}
+}
+});
+
+if (Object.keys(tempAnnotations).length === 0) {
+showStatus('⚠️ Please select at least one bucket or provide annotations', 'warning');
+return;
+}
+
+tool.annotations[convId] = tempAnnotations;
+showStatus('✅ Annotations saved!', 'success');
+clearUnsaved();
+updateAnnotatedCount();
+displayConversation();
+}
+
+function loadAnnotations() {
+const convId = tool.conversations[tool.currentIndex][0].Id;
+const savedAnnotations = tool.annotations[convId] || {};
+
+document.querySelectorAll('input[name="bot-response"]').forEach(radio => radio.checked = false);
+document.getElementById('hva-select').value = '';
+document.querySelectorAll('select[name*="-static"]').forEach(sel => sel.value = '');
+document.querySelectorAll('textarea').forEach(ta => ta.value = '');
+
+// Remove all has-content classes first
+document.querySelectorAll('.collapsible-section').forEach(section => {
+section.classList.remove('has-content');
+section.querySelector('.collapsible-header').classList.remove('has-content');
+});
+
+if (savedAnnotations["Bot Response"]) {
+const radio = document.querySelector(`input[name="bot-response"][value="${savedAnnotations["Bot Response"]}"]`);
+if (radio) {
+radio.checked = true;
+const section = radio.closest('.collapsible-section');
+if (section) {
+section.classList.add('has-content');
+section.querySelector('.collapsible-header').classList.add('has-content');
+}
+}
+}
+
+if (savedAnnotations["HVA"]) {
+document.getElementById('hva-select').value = savedAnnotations["HVA"];
+const section = document.getElementById('hva-select').closest('.collapsible-section');
+if (section) {
+section.classList.add('has-content');
+section.querySelector('.collapsible-header').classList.add('has-content');
+}
+}
+
+tool.buckets.slice(2).forEach(bucket => {
+if (savedAnnotations[bucket]) {
+const section = document.querySelector(`[data-bucket="${bucket}"]`);
+if (section) {
+section.classList.add('has-content');
+section.querySelector('.collapsible-header').classList.add('has-content');
+}
+
+if (tool.staticComments[bucket] && tool.staticComments[bucket].length > 0) {
+const parts = savedAnnotations[bucket].split(' - ');
+const staticValue = parts[0];
+const subValue = parts.slice(1).join(' - ');
+
+const staticDropdown = document.querySelector(`select[name="${bucket}-static"]`);
+const subTextarea = document.querySelector(`textarea[name="${bucket}-sub"]`);
+
+if (staticDropdown) staticDropdown.value = staticValue;
+if (subTextarea) subTextarea.value = subValue;
+} else {
+const textarea = document.querySelector(`textarea[name="${bucket}"]`);
+if (textarea) textarea.value = savedAnnotations[bucket];
+}
+}
+});
+}
+
+function showStatus(message, type) {
+elements.statusMessage.textContent = message;
+elements.statusMessage.className = `status-message status-${type}`;
+elements.statusMessage.style.display = 'block';
+setTimeout(() => {
+elements.statusMessage.style.display = 'none';
+}, 3000);
+}
+
+function showLoading(show) {
+elements.loadingSpinner.style.display = show ? 'flex' : 'none';
+}
+
+function jumpToConversation() {
+const jumpValue = parseInt(elements.jumpInput.value);
+if (!jumpValue || jumpValue < 1 || jumpValue > tool.conversations.length) {
+showStatus('⚠️ Invalid conversation number', 'warning');
+return;
+}
+
+if (tool.hasUnsavedChanges) {
+if (!confirm('You have unsaved changes. Continue without saving?')) {
+return;
+}
+}
+
+tool.currentIndex = jumpValue - 1;
+displayConversation();
+}
+
+function s2ab(s) {
+const buf = new ArrayBuffer(s.length);
+const view = new Uint8Array(buf);
+for (let i = 0; i < s.length; i++) {
+view[i] = s.charCodeAt(i) & 0xFF;
+}
+return buf;
+}
+
+elements.downloadBtn.addEventListener('click', async () => {
+try {
+if (Object.keys(tool.annotations).length === 0) {
+showStatus('⚠️ No annotations to download', 'warning');
+return;
+}
+
+showLoading(true);
+
+const annotatedData = [];
+tool.conversations.forEach(conv => {
+const convId = conv[0].Id;
+const savedAnnotations = tool.annotations[convId];
+
+if (savedAnnotations && Object.keys(savedAnnotations).length > 0) {
+conv.forEach((message, index) => {
+const isFirstMessage = index === 0;
+const isLastMessage = index === conv.length - 1;
+
+const row = {
+'Id': message.Id,
+'llmGeneratedUserMessage': message.llmGeneratedUserMessage || '',
+'botMessage': message.botMessage || '',
+'Customer Feedback': isLastMessage ? message['Customer Feedback'] || '' : ''
+};
+
+if (isFirstMessage) {
+tool.buckets.forEach(bucket => {
+row[bucket] = savedAnnotations[bucket] || '';
+});
+} else {
+tool.buckets.forEach(bucket => {
+row[bucket] = '';
+});
+}
+
+annotatedData.push(row);
+});
+}
+});
+
+const ws = XLSX.utils.json_to_sheet(annotatedData);
+const wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, ws, "Annotations");
+
+const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+const url = window.URL.createObjectURL(blob);
+
+const a = document.createElement('a');
+a.href = url;
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+a.download = `annotated_conversations_${timestamp}.xlsx`;
+document.body.appendChild(a);
+a.click();
+
+window.URL.revokeObjectURL(url);
+document.body.removeChild(a);
+
+showStatus('✅ Downloaded successfully!', 'success');
+} catch (error) {
+showStatus('❌ Error downloading file', 'error');
+} finally {
+showLoading(false);
+}
+});
+
+elements.prevBtn.addEventListener('click', () => {
+if (tool.hasUnsavedChanges) {
+if (!confirm('You have unsaved changes. Continue without saving?')) {
+return;
+}
+}
+
+if (tool.currentIndex > 0) {
+tool.currentIndex--;
+displayConversation();
+} else {
+showStatus('⚠️ This is the first conversation', 'warning');
+}
+});
+
+elements.nextBtn.addEventListener('click', () => {
+if (tool.hasUnsavedChanges) {
+if (!confirm('You have unsaved changes. Continue without saving?')) {
+return;
+}
+}
+
+if (tool.currentIndex < tool.conversations.length - 1) {
+tool.currentIndex++;
+displayConversation();
+} else {
+showStatus('⚠️ This is the last conversation', 'warning');
+}
+});
+
+elements.saveBtn.addEventListener('click', saveCurrentAnnotations);
+
+elements.jumpBtn.addEventListener('click', jumpToConversation);
+
+elements.jumpInput.addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+jumpToConversation();
+}
+});
+
+document.addEventListener('keydown', (e) => {
+if (elements.mainInterface.style.display === 'none') return;
+if (e.key === 'ArrowLeft' && !e.target.matches('input, textarea, select')) {
+elements.prevBtn.click();
+} else if (e.key === 'ArrowRight' && !e.target.matches('input, textarea, select')) {
+elements.nextBtn.click();
+} else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+e.preventDefault();
+elements.saveBtn.click();
+}
+});
+
+createFeedbackForm();
+
+window.addEventListener('beforeunload', (e) => {
+if (tool.hasUnsavedChanges) {
+e.preventDefault();
+e.returnValue = '';
+}
+});
+
+});
+</script>
+</body>
+</html>
