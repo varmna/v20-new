@@ -223,21 +223,33 @@ gap: 10px;
 display: flex;
 align-items: center;
 gap: 10px;
+background: var(--background-light);
+padding: 8px 12px;
+border-radius: 6px;
+border: 1px solid var(--border-color);
 }
 
 .jump-to-section label {
 font-size: 13px;
 color: var(--text-secondary);
 white-space: nowrap;
+font-weight: 500;
 }
 
 .jump-to-section input {
-width: 80px;
+width: 70px;
 padding: 6px 10px;
 border: 1px solid var(--border-color);
 border-radius: 4px;
 font-size: 14px;
 text-align: center;
+font-weight: 500;
+}
+
+.jump-to-section input:focus {
+outline: none;
+border-color: var(--primary-color);
+box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 .quick-actions {
@@ -247,21 +259,56 @@ gap: 8px;
 
 .progress-bar-wrapper {
 flex: 1;
-max-width: 200px;
+max-width: 600px;
+min-width: 400px;
 }
 
 .progress-bar {
 width: 100%;
-height: 6px;
+height: 32px;
 background: #e9ecef;
-border-radius: 3px;
+border-radius: 8px;
 overflow: hidden;
+display: flex;
+cursor: pointer;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 3px rgba(0,0,0,0.1);
+border: 2px solid #dee2e6;
 }
 
-.progress-fill {
+.progress-segment {
 height: 100%;
-background: linear-gradient(90deg, var(--primary-color), #0056b3);
-transition: width 0.3s ease;
+transition: all 0.2s ease;
+border-right: 2px solid rgba(255,255,255,0.6);
+position: relative;
+flex-shrink: 0;
+min-width: 3px;
+}
+
+.progress-segment:last-child {
+border-right: none;
+}
+
+.progress-segment:hover {
+opacity: 0.85;
+transform: scaleY(1.15);
+box-shadow: 0 0 8px rgba(0,0,0,0.3);
+z-index: 10;
+}
+
+.progress-segment.annotated {
+background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+}
+
+.progress-segment.not-annotated {
+background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important;
+box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
+}
+
+.progress-segment.current {
+box-shadow: 0 0 0 3px #007bff, 0 0 10px rgba(0,123,255,0.5) !important;
+z-index: 20;
+transform: scaleY(1.2);
 }
 
 .keyboard-shortcuts-hint {
@@ -473,8 +520,20 @@ background: var(--background-light);
 }
 
 .btn-sm {
-padding: 6px 12px;
+padding: 7px 14px;
 font-size: 13px;
+font-weight: 600;
+}
+
+.btn-outline.btn-sm {
+background: var(--primary-color);
+color: white;
+border: 1px solid var(--primary-color);
+}
+
+.btn-outline.btn-sm:hover {
+background: #0056b3;
+border-color: #0056b3;
 }
 
 .btn:disabled {
@@ -651,9 +710,7 @@ font-style: italic;
 <button id="next-btn" class="btn btn-outline">Next ▶</button>
 </div>
 <div class="progress-bar-wrapper">
-<div class="progress-bar">
-<div id="progress-fill" class="progress-fill" style="width: 0%"></div>
-</div>
+<div class="progress-bar" id="progress-bar"></div>
 </div>
 <div class="jump-to-section">
 <label for="jump-input">Jump to:</label>
@@ -672,7 +729,7 @@ font-style: italic;
 <div class="unsaved-indicator" id="unsaved-indicator">⚠️ You have unsaved changes</div>
 <button id="save-btn" class="btn btn-success">Submit</button>
 <div class="keyboard-shortcuts-hint">
-💡 Tip: Use ← → arrows to navigate | Ctrl/Cmd+S to save
+💡 Tip: Use ← → arrows to navigate | Ctrl/Cmd+S to save | Click progress bar to jump
 </div>
 </div>
 </div>
@@ -768,7 +825,7 @@ downloadBtn: document.getElementById('download-btn'),
 jumpInput: document.getElementById('jump-input'),
 jumpBtn: document.getElementById('jump-btn'),
 progressText: document.getElementById('progress-text'),
-progressFill: document.getElementById('progress-fill'),
+progressBar: document.getElementById('progress-bar'),
 annotatedCount: document.getElementById('annotated-count'),
 unsavedIndicator: document.getElementById('unsaved-indicator'),
 statusMessage: document.getElementById('status-message'),
@@ -848,7 +905,6 @@ details.style.display = 'block';
 markUnsaved();
 } else {
 details.style.display = 'none';
-// Clear the fields
 const selects = details.querySelectorAll('select');
 const textareas = details.querySelectorAll('textarea');
 selects.forEach(s => s.value = '');
@@ -947,8 +1003,53 @@ tool.conversations = Object.values(groupedData);
 tool.currentIndex = 0;
 tool.annotations = {};
 elements.jumpInput.max = tool.conversations.length;
+updateProgressBar();
 displayConversation();
 updateAnnotatedCount();
+}
+
+function updateProgressBar() {
+elements.progressBar.innerHTML = '';
+
+if (!tool.conversations || tool.conversations.length === 0) {
+console.log('No conversations to display in progress bar');
+return;
+}
+
+const segmentWidth = 100 / tool.conversations.length;
+
+tool.conversations.forEach((conv, index) => {
+const convId = conv[0].Id;
+const isAnnotated = tool.annotations[convId] && Object.keys(tool.annotations[convId]).length > 0;
+const isCurrent = index === tool.currentIndex;
+
+    const segment = document.createElement('div');
+segment.className = `progress-segment ${isAnnotated ? 'annotated' : 'not-annotated'} ${isCurrent ? 'current' : ''}`;
+segment.style.width = `${segmentWidth}%`;
+segment.style.minWidth = '4px';
+segment.title = `Conversation ${index + 1}${isAnnotated ? ' - Annotated ✓' : ' - Not Annotated ⚠'}${isCurrent ? ' (Current)' : ''}`;
+segment.dataset.index = index;
+
+// Debug logging
+if (index === 0) {
+console.log('First segment - Annotated:', isAnnotated, 'ConvId:', convId, 'Annotations:', tool.annotations[convId]);
+}
+
+segment.addEventListener('click', (e) => {
+e.stopPropagation();
+if (tool.hasUnsavedChanges) {
+if (!confirm('You have unsaved changes. Continue without saving?')) {
+return;
+}
+}
+tool.currentIndex = index;
+displayConversation();
+});
+
+elements.progressBar.appendChild(segment);
+});
+
+console.log('Progress bar updated. Total conversations:', tool.conversations.length, 'Total annotated:', Object.keys(tool.annotations).length);
 }
 
 function displayConversation() {
@@ -995,8 +1096,7 @@ ${message.botMessage}
 elements.conversationDisplay.innerHTML = html;
 elements.conversationDisplay.scrollTop = 0;
 elements.progressText.textContent = `${tool.currentIndex + 1}/${tool.conversations.length} Conversations`;
-const progressPercent = ((tool.currentIndex + 1) / tool.conversations.length) * 100;
-elements.progressFill.style.width = `${progressPercent}%`;
+updateProgressBar();
 elements.jumpInput.value = '';
 loadAnnotations();
 clearUnsaved();
@@ -1053,11 +1153,27 @@ showStatus('⚠️ Please select at least one bucket or provide annotations', 'w
 return;
 }
 
+// Save the annotations
 tool.annotations[convId] = tempAnnotations;
-showStatus('✅ Annotations saved!', 'success');
+
+// Clear unsaved indicator
 clearUnsaved();
+
+// Update the annotation count
 updateAnnotatedCount();
-displayConversation();
+
+// Update the progress bar to show green
+updateProgressBar();
+
+// Update the annotation status badge
+const isAnnotated = Object.keys(tempAnnotations).length > 0;
+elements.annotationStatus.innerHTML = `
+<div class="status-indicator ${isAnnotated ? 'status-annotated' : 'status-not-annotated'}">
+${isAnnotated ? '✓ Annotated' : '⚠ Not Annotated'}
+</div>
+`;
+
+showStatus('✅ Annotations saved!', 'success');
 }
 
 function loadAnnotations() {
